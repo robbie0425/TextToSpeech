@@ -1,0 +1,1462 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>文字轉語音</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --app-bg:linear-gradient(180deg,#f5f8ff 0%,#e9eff9 100%);
+  --page-bg:#dfe7f4;
+  --surface:#ffffff;
+  --surface-2:#f2f6fd;
+  --surface-3:#dfe6f2;
+  --line:rgba(16,40,80,.08);
+  --text:#0d1a31;
+  --muted:#5b6c8b;
+  --faint:#8b9ab5;
+  --accent:#2f7cf6;
+  --accent-strong:#1e66e0;
+  --accent-soft:rgba(47,124,246,.13);
+  --violet:#7b5cff;
+  --star:#f5ad00;
+  --danger:#e5484d;
+  --heart:#d65cf0;
+  --shadow:0 8px 24px rgba(24,56,120,.10);
+  --glow:0 14px 40px rgba(47,124,246,.38);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --app-bg:linear-gradient(180deg,#0c2142 0%,#081630 42%,#050e1e 100%);
+    --page-bg:#030913;
+    --surface:#0f2343;
+    --surface-2:#132b52;
+    --surface-3:#1d3a68;
+    --line:rgba(150,185,255,.08);
+    --text:#eef3ff;
+    --muted:#93a7cb;
+    --faint:#6880a8;
+    --accent:#3687ff;
+    --accent-strong:#2a74ec;
+    --accent-soft:rgba(54,135,255,.18);
+    --violet:#8a6bff;
+    --shadow:0 12px 32px rgba(0,0,0,.32);
+    --glow:0 0 0 10px rgba(54,135,255,.12),0 16px 48px rgba(54,135,255,.55);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --app-bg:linear-gradient(180deg,#0c2142 0%,#081630 42%,#050e1e 100%);
+  --page-bg:#030913;
+  --surface:#0f2343;
+  --surface-2:#132b52;
+  --surface-3:#1d3a68;
+  --line:rgba(150,185,255,.08);
+  --text:#eef3ff;
+  --muted:#93a7cb;
+  --faint:#6880a8;
+  --accent:#3687ff;
+  --accent-strong:#2a74ec;
+  --accent-soft:rgba(54,135,255,.18);
+  --violet:#8a6bff;
+  --shadow:0 12px 32px rgba(0,0,0,.32);
+  --glow:0 0 0 10px rgba(54,135,255,.12),0 16px 48px rgba(54,135,255,.55);
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0;height:100%;background:var(--page-bg);color:var(--text);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
+  font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;align-items:center;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,textarea:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+
+.app{
+  position:relative;width:100%;max-width:460px;height:100%;
+  background:var(--app-bg);display:flex;flex-direction:column;overflow:hidden;
+}
+@media (min-width:720px) and (min-height:720px){
+  .app{height:calc(100% - 48px);max-height:920px;border-radius:34px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+}
+.screens{position:relative;flex:1;min-height:0}
+.screen{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;padding:10px 18px 28px;display:none}
+.screen.active{display:block;animation:enter .2s ease-out}
+@keyframes enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* icons */
+.i{display:inline-flex;width:22px;height:22px;flex:none}
+.ico{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ico .f{fill:currentColor;stroke:none}
+
+/* headers */
+.bar{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;height:52px;margin:0 -6px 8px}
+.bar h2{margin:0;text-align:center;font-size:19px;font-weight:700;letter-spacing:.02em}
+.icon-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--text)}
+.icon-btn:hover{background:var(--accent-soft)}
+.icon-btn .i{width:24px;height:24px}
+.bar .icon-btn.accent{color:var(--accent)}
+.star-btn .i{color:var(--faint)}
+.star-btn.on .i{color:var(--star)}
+.star-btn.on .ico{fill:currentColor}
+
+.hero{position:relative;text-align:center;padding:30px 0 22px}
+.hero .theme-btn{position:absolute;top:2px;right:-6px}
+.hero .theme-btn .i{color:var(--muted)}
+.logo{width:56px;height:56px;margin:0 auto 10px;color:var(--accent)}
+.logo .i{width:56px;height:56px}
+.hero h1{margin:0;font-size:34px;font-weight:900;letter-spacing:.06em;line-height:1.2}
+.hero p{margin:8px 0 0;color:var(--muted);font-size:15px;letter-spacing:.04em}
+
+/* cards & rows */
+.card{background:var(--surface);border-radius:18px;box-shadow:var(--shadow)}
+.text-card{padding:14px 16px 10px;margin-bottom:12px}
+.text-card textarea{
+  display:block;width:100%;min-height:150px;resize:vertical;border:0;background:transparent;color:var(--text);
+  font:inherit;font-size:17px;line-height:1.8;outline:none;padding:0
+}
+.text-card textarea::placeholder{color:var(--faint)}
+.text-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+.foot-actions{display:flex;gap:6px}
+.chip-btn{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 12px;border-radius:999px;background:var(--surface-2);color:var(--muted);font-size:13px}
+.chip-btn .i{width:15px;height:15px}
+.chip-btn:hover{color:var(--text)}
+.count{color:var(--faint);font-size:13px;font-variant-numeric:tabular-nums}
+.count.full{color:var(--danger)}
+
+.stack{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.row{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:0 16px;text-align:left}
+.row-ico{color:var(--accent);display:inline-flex}
+.row-ico.violet{color:var(--violet)}
+.row-label{font-weight:500;flex:none}
+.row-value{margin-left:auto;color:var(--muted);font-size:15px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.row--inline .row-value{margin-left:6px;margin-right:auto;text-align:left;color:var(--text)}
+.row .chev{color:var(--faint);width:18px;height:18px}
+
+.group{background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:22px}
+.group > .row + .row,.group > .row + .slider-block,.group > .slider-block + .slider-block,.group > .toggle-row + .toggle-row{border-top:1px solid var(--line)}
+.group-title{margin:0 4px 10px;font-size:15px;font-weight:500;color:var(--muted)}
+
+.primary{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;border-radius:999px;
+  background:var(--accent);color:#fff;font-size:18px;font-weight:700;letter-spacing:.06em;
+  box-shadow:0 10px 26px rgba(47,124,246,.35);transition:transform .12s,background .2s
+}
+.primary:hover{background:var(--accent-strong)}
+.primary:active{transform:scale(.98)}
+.primary .i{width:20px;height:20px}
+.secondary{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:52px;border-radius:999px;background:var(--surface-2);color:var(--text);font-weight:500}
+.btn-pair{display:grid;grid-template-columns:1fr 1.6fr;gap:10px}
+
+.notice{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border-radius:16px;background:var(--surface);color:var(--muted);font-size:13.5px;line-height:1.6;box-shadow:var(--shadow);margin-bottom:16px}
+.notice .i{color:var(--accent);width:20px;height:20px;margin-top:1px}
+.notice.warn .i{color:var(--danger)}
+
+/* sliders */
+.slider-block{padding:14px 16px 12px}
+.slider-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.slider-head .val{margin-left:auto;color:var(--accent);font-weight:500;font-variant-numeric:tabular-nums}
+.slider-head .val.violet{color:var(--violet)}
+.slider-line{display:flex;align-items:center;gap:10px}
+.step{width:30px;height:30px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;flex:none;color:var(--text)}
+.step .i{width:16px;height:16px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:30px;background:transparent;margin:0;--p:50%;--c:var(--accent);cursor:pointer}
+input[type=range].violet{--c:var(--violet)}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(to right,var(--c) 0,var(--c) var(--p),var(--surface-3) var(--p),var(--surface-3) 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-8px;border-radius:50%;background:#fff;border:5px solid var(--c);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:var(--surface-3)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:99px;background:var(--c)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:5px solid var(--c)}
+
+.presets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.presets.five{grid-template-columns:repeat(5,1fr);gap:8px}
+.preset{height:42px;border-radius:12px;background:var(--surface-2);color:var(--muted);font-variant-numeric:tabular-nums;font-size:15px}
+.preset[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:700}
+.presets.five .preset[aria-pressed="true"]{background:var(--violet)}
+
+/* toggles */
+.toggle-row{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.toggle-row .txt{flex:1;min-width:0}
+.toggle-row .ttl{font-weight:500;display:flex;align-items:center;gap:10px}
+.toggle-row .desc{font-size:13px;color:var(--faint);margin-top:2px}
+.switch{position:relative;width:52px;height:31px;border-radius:99px;background:var(--surface-3);flex:none;transition:background .2s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .2s}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"]::after{transform:translateX(21px)}
+
+/* player */
+.reader{padding:18px 18px 10px;margin-bottom:22px}
+.reader-text{max-height:min(38vh,320px);overflow-y:auto;font-size:18px;line-height:1.95;white-space:pre-wrap;word-break:break-word;padding-right:4px}
+.seg{border-radius:6px;transition:background .2s,color .2s;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.seg.done{color:var(--muted)}
+.seg.cur{background:var(--accent-soft);box-shadow:0 0 0 3px var(--accent-soft);color:var(--text)}
+.reader-foot{text-align:right;color:var(--faint);font-size:13px;margin-top:8px;font-variant-numeric:tabular-nums}
+.track{position:relative;height:28px;cursor:pointer;touch-action:none}
+.track::before{content:"";position:absolute;left:0;right:0;top:12px;height:5px;border-radius:99px;background:var(--surface-3)}
+.track .fill{position:absolute;left:0;top:12px;height:5px;border-radius:99px;background:var(--accent);width:0}
+.track .thumb{position:absolute;top:5px;width:19px;height:19px;margin-left:-9px;border-radius:50%;background:#fff;border:4px solid var(--accent);left:0;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.times{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums;margin-top:2px}
+.controls{display:flex;align-items:center;justify-content:center;gap:34px;margin:26px 0 30px}
+.ctrl{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.ctrl .i{width:22px;height:22px}
+.ctrl.main{width:88px;height:88px;background:var(--accent);color:#fff;box-shadow:var(--glow);transition:transform .12s}
+.ctrl.main:active{transform:scale(.96)}
+.ctrl.main .i{width:34px;height:34px}
+.ctrl.main .ico-pause{display:none}
+.is-playing .ctrl.main .ico-pause{display:inline-flex}
+.is-playing .ctrl.main .ico-play{display:none}
+.voice-card{display:block;width:100%;padding:16px 16px 18px;text-align:center}
+.vc-top{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:14px}
+.vc-top .i{width:17px;height:17px;color:var(--accent)}
+.vc-voice{color:var(--faint);max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wave{display:flex;align-items:center;justify-content:center;gap:5px;height:56px;margin-top:8px}
+.wave span{width:4px;border-radius:3px;background:var(--accent);height:var(--h);opacity:.85;transform-origin:center}
+.is-playing .wave span{animation:wave 1s ease-in-out infinite;animation-delay:var(--d)}
+@keyframes wave{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1.15)}}
+.vc-meta{color:var(--faint);font-size:13px;margin-top:6px}
+
+/* favorites */
+.fav{display:flex;align-items:center;gap:6px;padding:4px 6px 4px 4px;margin-bottom:10px}
+.fav-main{flex:1;min-width:0;display:flex;gap:12px;padding:12px;text-align:left;border-radius:14px}
+.fav-star{color:var(--star);margin-top:1px}
+.fav-star .ico{fill:currentColor}
+.fav-body{min-width:0;display:flex;flex-direction:column}
+.fav-title{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fav-preview{color:var(--muted);font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.fav-time{color:var(--faint);font-size:12.5px;margin-top:4px}
+.fav-play{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 6px 16px rgba(47,124,246,.35)}
+.fav-play .i{width:16px;height:16px;margin-left:2px}
+.fav-more{width:34px;height:44px;display:grid;place-items:center;color:var(--faint);flex:none;border-radius:10px}
+.empty{text-align:center;padding:60px 20px 20px;color:var(--muted)}
+.empty .big{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.empty .big .i{width:30px;height:30px}
+.empty h3{margin:0 0 6px;color:var(--text);font-size:18px}
+.empty p{margin:0 auto 20px;max-width:260px;font-size:14px}
+.empty .primary{max-width:220px;margin:0 auto;height:48px;font-size:16px}
+
+/* settings */
+.heart-card{display:flex;gap:14px;align-items:center;padding:18px;border-radius:18px;background:var(--surface);box-shadow:var(--shadow)}
+.heart-card .i{width:34px;height:34px;color:var(--heart)}
+.heart-card .ico{fill:currentColor}
+.heart-card b{display:block;font-weight:500}
+.heart-card small{color:var(--faint);font-size:13px}
+.theme-ico-dark{display:none}
+:root[data-theme="dark"] .theme-ico-light{display:none}
+:root[data-theme="dark"] .theme-ico-dark{display:inline-flex}
+
+/* lists (language / voices) */
+.pick{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;text-align:left;min-height:56px}
+.pick .lbl{flex:1;min-width:0}
+.pick .lbl span{display:block}
+.pick .lbl .sub{font-size:12.5px;color:var(--faint)}
+.pick .lbl .main{overflow:hidden;text-overflow:ellipsis}
+.pick[aria-checked="true"] .lbl .main{color:var(--accent);font-weight:500}
+.pick + .pick{border-top:1px solid var(--line)}
+.radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--faint);flex:none;position:relative;opacity:.7}
+.pick[aria-checked="true"] .radio{border-color:var(--accent);opacity:1;background:var(--accent)}
+.pick[aria-checked="true"] .radio::after{content:"";position:absolute;inset:5px;border-radius:50%;background:#fff}
+.tag{font-size:11px;padding:1px 6px;border-radius:6px;background:var(--surface-2);color:var(--faint);margin-left:6px;vertical-align:1px}
+.tabs{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);margin-bottom:14px}
+.tabs button{flex:1;height:40px;border-radius:999px;color:var(--muted);font-weight:500}
+.tabs button[aria-selected="true"]{background:var(--accent);color:#fff}
+.field{width:100%;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font:inherit;padding:0 14px;outline:none}
+.field:focus{border-color:var(--accent)}
+.title-field{border:0;background:transparent;height:auto;padding:0 0 10px;margin-bottom:10px;border-bottom:1px solid var(--line);border-radius:0;font-weight:700;font-size:18px}
+.title-field:focus{border-color:var(--accent)}
+
+/* tabbar & mini player */
+.tabbar{flex:none;display:grid;grid-template-columns:repeat(3,1fr);padding:8px 10px 10px;background:var(--surface);border-top:1px solid var(--line);border-radius:22px 22px 0 0}
+.tabbar button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12.5px;color:var(--faint);padding:4px 0}
+.tabbar button .i{width:25px;height:25px}
+.tabbar button[aria-current="page"]{color:var(--accent);font-weight:500}
+.tabbar button[aria-current="page"] .ico{fill:currentColor;fill-opacity:.18}
+.mini{flex:none;display:flex;align-items:center;gap:10px;margin:0 12px 8px;padding:8px 8px 8px 14px;border-radius:16px;background:var(--surface-2);box-shadow:var(--shadow)}
+.mini-open{flex:1;min-width:0;text-align:left;display:flex;flex-direction:column}
+.mini-open b{font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-open small{color:var(--accent);font-size:12px}
+.mini-toggle{width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;flex:none}
+.mini-toggle .i{width:18px;height:18px}
+.mini-toggle .ico-pause{display:none}
+.is-playing .mini-toggle .ico-pause{display:inline-flex}
+.is-playing .mini-toggle .ico-play{display:none}
+
+/* sheet & toast */
+.overlay{position:absolute;inset:0;background:rgba(2,8,20,.55);display:flex;align-items:flex-end;z-index:20;animation:fade .15s}
+@keyframes fade{from{opacity:0}}
+.sheet{width:100%;background:var(--surface);border-radius:24px 24px 0 0;padding:22px 18px calc(18px + env(safe-area-inset-bottom,0px));animation:up .2s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.4}}
+.sheet h3{margin:0 0 8px;font-size:18px}
+.sheet .body{color:var(--muted);font-size:14.5px;line-height:1.7;margin-bottom:18px}
+.sheet .body label{display:block;font-size:13px;margin-bottom:6px}
+.sheet-actions{display:flex;flex-direction:column;gap:10px}
+.sheet-actions .danger{background:var(--danger);box-shadow:none}
+.toast{position:absolute;left:50%;bottom:110px;transform:translate(-50%,10px);background:var(--text);color:var(--surface);padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:30;max-width:85%;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <main class="screens">
+
+    <!-- 首頁 -->
+    <section class="screen" data-screen="home">
+      <header class="hero">
+        <button class="icon-btn theme-btn" data-action="toggle-theme" aria-label="切換深淺色模式">
+          <i data-icon="moon" class="theme-ico-dark"></i><i data-icon="sun" class="theme-ico-light"></i>
+        </button>
+        <div class="logo"><i data-icon="logo"></i></div>
+        <h1>文字轉語音</h1>
+        <p>輸入文字，讓瀏覽器為你朗讀</p>
+      </header>
+      <div class="notice warn" data-unsupported hidden><i data-icon="info"></i><span>這個瀏覽器不支援語音朗讀。請改用最新版的 Chrome、Edge 或 Safari 開啟。</span></div>
+      <div class="text-card card">
+        <textarea id="homeText" maxlength="5000" placeholder="請輸入要朗讀的文字…" aria-label="要朗讀的文字"></textarea>
+        <div class="text-foot">
+          <div class="foot-actions">
+            <button class="chip-btn" data-action="save-home"><i data-icon="star"></i>收藏</button>
+            <button class="chip-btn" data-action="clear-home">清除</button>
+          </div>
+          <span class="count" id="homeCount">0 / 5000</span>
+        </div>
+      </div>
+      <div class="stack">
+        <button class="row row--inline card" data-go="language"><span class="row-ico"><i data-icon="globe"></i></span><span class="row-label">語言</span><span class="row-value" data-bind="lang"></span><i data-icon="chevR" class="chev"></i></button>
+        <button class="row row--inline card" data-go="adjust"><span class="row-ico"><i data-icon="gauge"></i></span><span class="row-label">語速</span><span class="row-value" data-bind="rate"></span><i data-icon="chevR" class="chev"></i></button>
+        <button class="row row--inline card" data-go="adjust"><span class="row-ico violet"><i data-icon="music"></i></span><span class="row-label">音調</span><span class="row-value" data-bind="pitchShort"></span><i data-icon="chevR" class="chev"></i></button>
+      </div>
+      <button class="primary" data-action="start-home"><i data-icon="play"></i>開始朗讀</button>
+    </section>
+
+    <!-- 播放 -->
+    <section class="screen" data-screen="player">
+      <header class="bar">
+        <button class="icon-btn" data-action="back" aria-label="返回"><i data-icon="chevL"></i></button>
+        <h2>正在朗讀</h2>
+        <button class="icon-btn star-btn" id="playerStar" data-action="star-player" aria-label="加入收藏"><i data-icon="star"></i></button>
+      </header>
+      <div class="reader card">
+        <div class="reader-text" id="readerText"></div>
+        <div class="reader-foot" id="segCount">1 / 1</div>
+      </div>
+      <div class="track" id="track" role="slider" tabindex="0" aria-label="播放進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="fill"></div><div class="thumb"></div>
+      </div>
+      <div class="times"><span id="tNow">00:00</span><span id="tTotal">00:00</span></div>
+      <div class="controls">
+        <button class="ctrl" data-action="prev" aria-label="上一句"><i data-icon="skipB"></i></button>
+        <button class="ctrl main" data-action="toggle-play" aria-label="播放或暫停"><i data-icon="play" class="ico-play"></i><i data-icon="pause" class="ico-pause"></i></button>
+        <button class="ctrl" data-action="next" aria-label="下一句"><i data-icon="skipF"></i></button>
+      </div>
+      <button class="voice-card card" data-go="voiceSettings" aria-label="開啟語音設定">
+        <div class="vc-top"><i data-icon="globe"></i><span data-bind="lang"></span><span class="vc-voice" data-bind="voice"></span></div>
+        <div class="wave" id="wave"></div>
+        <div class="vc-meta">語速 <span data-bind="rate"></span>　音調 <span data-bind="pitchShort"></span></div>
+      </button>
+    </section>
+
+    <!-- 編輯文字 -->
+    <section class="screen" data-screen="edit">
+      <header class="bar">
+        <button class="icon-btn" data-action="back" aria-label="返回"><i data-icon="chevL"></i></button>
+        <h2>編輯文字</h2>
+        <button class="icon-btn star-btn" id="editStar" data-action="star-edit" aria-label="收藏"><i data-icon="star"></i></button>
+      </header>
+      <div class="text-card card">
+        <input class="field title-field" id="editTitle" maxlength="30" placeholder="名稱" aria-label="收藏名稱">
+        <textarea id="editText" maxlength="5000" placeholder="請輸入要朗讀的文字…" aria-label="要朗讀的文字"></textarea>
+        <div class="text-foot"><span></span><span class="count" id="editCount">0 / 5000</span></div>
+      </div>
+      <div class="group">
+        <button class="row" data-go="language"><span class="row-ico"><i data-icon="globe"></i></span><span class="row-label">語言</span><span class="row-value" data-bind="lang"></span><i data-icon="chevR" class="chev"></i></button>
+        <button class="row" data-go="voices"><span class="row-ico"><i data-icon="volume"></i></span><span class="row-label">語音選擇</span><span class="row-value" data-bind="voice"></span><i data-icon="chevR" class="chev"></i></button>
+        <button class="row" data-go="adjust"><span class="row-ico"><i data-icon="gauge"></i></span><span class="row-label">語速</span><span class="row-value" data-bind="rate"></span><i data-icon="chevR" class="chev"></i></button>
+        <button class="row" data-go="adjust"><span class="row-ico violet"><i data-icon="music"></i></span><span class="row-label">音調</span><span class="row-value" data-bind="pitch"></span><i data-icon="chevR" class="chev"></i></button>
+      </div>
+      <button class="primary" data-action="start-edit"><i data-icon="play"></i>開始朗讀</button>
+    </section>
+
+    <!-- 收藏 -->
+    <section class="screen" data-screen="favorites">
+      <header class="bar">
+        <span></span>
+        <h2>我的收藏</h2>
+        <button class="icon-btn" data-action="clear-favs" aria-label="清除所有收藏"><i data-icon="trash"></i></button>
+      </header>
+      <div id="favList"></div>
+    </section>
+
+    <!-- 設定 -->
+    <section class="screen" data-screen="settings">
+      <header class="bar"><span></span><h2>設定</h2><span></span></header>
+      <h3 class="group-title">外觀</h3>
+      <div class="group">
+        <div class="toggle-row">
+          <div class="txt"><div class="ttl"><span class="row-ico"><i data-icon="moon"></i></span>深色模式</div></div>
+          <button class="switch" role="switch" id="darkSwitch" aria-label="深色模式"></button>
+        </div>
+      </div>
+      <h3 class="group-title">朗讀</h3>
+      <div class="group">
+        <button class="row" data-go="voiceSettings"><span class="row-ico"><i data-icon="sliders"></i></span><span class="row-label">語音設定</span><span class="row-value" data-bind="voice"></span><i data-icon="chevR" class="chev"></i></button>
+      </div>
+      <h3 class="group-title">其他</h3>
+      <div class="group">
+        <button class="row" data-action="clear-favs"><span class="row-ico"><i data-icon="trash"></i></span><span class="row-label">清除收藏</span><span class="row-value" id="favCountLabel"></span><i data-icon="chevR" class="chev"></i></button>
+        <button class="row" data-action="about"><span class="row-ico"><i data-icon="info"></i></span><span class="row-label">關於本 App</span><span class="row-value"></span><i data-icon="chevR" class="chev"></i></button>
+      </div>
+      <div class="heart-card">
+        <i data-icon="heart"></i>
+        <div><b>希望這個 App 能幫助到你！</b><small>享受更輕鬆的朗讀體驗</small></div>
+      </div>
+    </section>
+
+    <!-- 語音設定 -->
+    <section class="screen" data-screen="voiceSettings">
+      <header class="bar">
+        <button class="icon-btn" data-action="back" aria-label="返回"><i data-icon="chevL"></i></button>
+        <h2>語音設定</h2>
+        <button class="icon-btn" data-action="close-sub" aria-label="關閉"><i data-icon="x"></i></button>
+      </header>
+      <h3 class="group-title">語音與聲音</h3>
+      <div class="group">
+        <button class="row" data-go="language"><span class="row-ico"><i data-icon="globe"></i></span><span class="row-label">語言</span><span class="row-value" data-bind="lang"></span><i data-icon="chevR" class="chev"></i></button>
+        <button class="row" data-go="voices"><span class="row-ico"><i data-icon="volume"></i></span><span class="row-label">語音選擇</span><span class="row-value" data-bind="voice"></span><i data-icon="chevR" class="chev"></i></button>
+        <div class="slider-block">
+          <div class="slider-head"><span class="row-ico"><i data-icon="gauge"></i></span><span class="row-label">語速</span><span class="val" data-bind="rate"></span></div>
+          <div class="slider-line">
+            <button class="step" data-step="rate" data-dir="-1" aria-label="降低語速"><i data-icon="minus"></i></button>
+            <input type="range" id="vsRate" min="0.5" max="2" step="0.05" aria-label="語速">
+            <button class="step" data-step="rate" data-dir="1" aria-label="提高語速"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+        <div class="slider-block">
+          <div class="slider-head"><span class="row-ico violet"><i data-icon="music"></i></span><span class="row-label">音調</span><span class="val violet" data-bind="pitch"></span></div>
+          <div class="slider-line">
+            <button class="step" data-step="pitch" data-dir="-1" aria-label="降低音調"><i data-icon="minus"></i></button>
+            <input type="range" class="violet" id="vsPitch" min="-2" max="2" step="1" aria-label="音調">
+            <button class="step" data-step="pitch" data-dir="1" aria-label="提高音調"><i data-icon="plus"></i></button>
+          </div>
+        </div>
+      </div>
+      <h3 class="group-title">進階功能</h3>
+      <div class="group">
+        <div class="toggle-row"><div class="txt"><div class="ttl">自動分段朗讀</div><div class="desc">逐句朗讀並標示目前的句子</div></div><button class="switch" role="switch" data-toggle="autoSegment" aria-label="自動分段朗讀"></button></div>
+        <div class="toggle-row"><div class="txt"><div class="ttl">結束後自動停止</div><div class="desc">關閉時會從頭重複朗讀</div></div><button class="switch" role="switch" data-toggle="stopAtEnd" aria-label="結束後自動停止"></button></div>
+        <div class="toggle-row"><div class="txt"><div class="ttl">背景播放</div><div class="desc">切到其他分頁時繼續朗讀</div></div><button class="switch" role="switch" data-toggle="backgroundPlay" aria-label="背景播放"></button></div>
+      </div>
+    </section>
+
+    <!-- 語言 -->
+    <section class="screen" data-screen="language">
+      <header class="bar">
+        <button class="icon-btn" data-action="back" aria-label="返回"><i data-icon="chevL"></i></button>
+        <h2>語言</h2><span></span>
+      </header>
+      <div class="group" id="langList" role="radiogroup" aria-label="語言"></div>
+      <div class="notice"><i data-icon="info"></i><span>沒有對應語音的語言，會改用瀏覽器的預設語音朗讀。</span></div>
+    </section>
+
+    <!-- 語音選擇 -->
+    <section class="screen" data-screen="voices">
+      <header class="bar">
+        <button class="icon-btn" data-action="back" aria-label="返回"><i data-icon="chevL"></i></button>
+        <h2>語音選擇</h2><span></span>
+      </header>
+      <div class="tabs" id="voiceTabs" role="tablist"></div>
+      <div class="group" id="voiceList" role="radiogroup" aria-label="語音"></div>
+      <div class="notice"><i data-icon="info"></i><span>不同裝置與瀏覽器提供的語音不同。點選語音會播放一小段試聽。</span></div>
+    </section>
+
+    <!-- 調整 -->
+    <section class="screen" data-screen="adjust">
+      <header class="bar">
+        <button class="icon-btn" data-action="back" aria-label="返回"><i data-icon="chevL"></i></button>
+        <h2>調整</h2><span></span>
+      </header>
+      <div class="group">
+        <div class="slider-block">
+          <div class="slider-head"><span class="row-ico"><i data-icon="gauge"></i></span><span class="row-label">語速</span><span class="val" id="adjRateVal"></span></div>
+          <div class="slider-line">
+            <button class="step" data-adj-step="rate" data-dir="-1" aria-label="降低語速"><i data-icon="minus"></i></button>
+            <input type="range" id="adjRate" min="0.5" max="2" step="0.05" aria-label="語速">
+            <button class="step" data-adj-step="rate" data-dir="1" aria-label="提高語速"><i data-icon="plus"></i></button>
+          </div>
+          <div class="presets" id="ratePresets"></div>
+        </div>
+      </div>
+      <div class="group">
+        <div class="slider-block">
+          <div class="slider-head"><span class="row-ico violet"><i data-icon="music"></i></span><span class="row-label">音調</span><span class="val violet" id="adjPitchVal"></span></div>
+          <div class="slider-line">
+            <button class="step" data-adj-step="pitch" data-dir="-1" aria-label="降低音調"><i data-icon="minus"></i></button>
+            <input type="range" class="violet" id="adjPitch" min="-2" max="2" step="1" aria-label="音調">
+            <button class="step" data-adj-step="pitch" data-dir="1" aria-label="提高音調"><i data-icon="plus"></i></button>
+          </div>
+          <div class="presets five" id="pitchPresets"></div>
+        </div>
+      </div>
+      <div class="btn-pair">
+        <button class="secondary" data-action="adj-preview"><i data-icon="volume"></i>試聽</button>
+        <button class="primary" data-action="adj-confirm">確定</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="mini" id="mini" hidden>
+    <button class="mini-open" data-action="open-player"><b id="miniTitle"></b><small id="miniState">正在朗讀</small></button>
+    <button class="mini-toggle" data-action="toggle-play" aria-label="播放或暫停"><i data-icon="play" class="ico-play"></i><i data-icon="pause" class="ico-pause"></i></button>
+  </div>
+
+  <nav class="tabbar" id="tabbar" aria-label="主要分頁">
+    <button data-tab="home"><i data-icon="home"></i>首頁</button>
+    <button data-tab="favorites"><i data-icon="heart"></i>收藏</button>
+    <button data-tab="settings"><i data-icon="settings"></i>設定</button>
+  </nav>
+
+  <div class="overlay" id="overlay" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <h3 id="sheetTitle"></h3>
+      <div class="body" id="sheetBody"></div>
+      <div class="sheet-actions" id="sheetActions"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- 圖示 ---------- */
+const ICONS = {
+  logo:'<path class="f" d="M3 9.2h3.6L11.5 5v14l-4.9-4.2H3z"/><path d="M15 9.5v5M18 7.5v9M21 10.5v3"/>',
+  home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  heart:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  globe:'<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  gauge:'<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+  music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  volume:'<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>',
+  play:'<path class="f" d="M7 4.6v14.8a1 1 0 0 0 1.52.85l11.8-7.4a1 1 0 0 0 0-1.7L8.52 3.75A1 1 0 0 0 7 4.6z"/>',
+  pause:'<rect class="f" x="5.5" y="4" width="4.5" height="16" rx="1.3"/><rect class="f" x="14" y="4" width="4.5" height="16" rx="1.3"/>',
+  skipB:'<path class="f" d="M19 5.2v13.6a1 1 0 0 1-1.6.8L9 13.2a1.5 1.5 0 0 1 0-2.4l8.4-6.4a1 1 0 0 1 1.6.8z"/><path d="M5 5v14"/>',
+  skipF:'<path class="f" d="M5 5.2v13.6a1 1 0 0 0 1.6.8l8.4-6.4a1.5 1.5 0 0 0 0-2.4L6.6 4.4A1 1 0 0 0 5 5.2z"/><path d="M19 5v14"/>',
+  chevL:'<path d="m15 18-6-6 6-6"/>',
+  chevR:'<path d="m9 18 6-6-6-6"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  star:'<path d="M12 2.8l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.36l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93z"/>',
+  trash:'<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  more:'<circle cx="9" cy="6" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="18" r="1.2"/>',
+  minus:'<path d="M5 12h14"/>',
+  plus:'<path d="M5 12h14M12 5v14"/>',
+  sliders:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>'
+};
+const svg = n => `<svg viewBox="0 0 24 24" class="ico" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+function hydrateIcons(root = document) {
+  root.querySelectorAll('i[data-icon]').forEach(el => {
+    const s = document.createElement('span');
+    s.className = ('i ' + el.className).trim();
+    s.innerHTML = svg(el.dataset.icon);
+    el.replaceWith(s);
+  });
+}
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- 狀態 ---------- */
+const MAX_LEN = 5000;
+const LS_KEY = 'tts-reader:v1';
+const LANGS = [
+  {code:'zh-TW', label:'中文（台灣）'},
+  {code:'zh-HK', label:'中文（香港）'},
+  {code:'zh-CN', label:'中文（中國）'},
+  {code:'en-US', label:'英文（美國）'},
+  {code:'en-GB', label:'英文（英國）'},
+  {code:'ja-JP', label:'日文（日本）'},
+  {code:'ko-KR', label:'韓文（韓國）'}
+];
+const DEFAULTS = {lang:'zh-TW', voiceURI:null, rate:1, pitch:0, autoSegment:true, stopAtEnd:true, backgroundPlay:false, theme:'dark'};
+let settings = {...DEFAULTS};
+let draft = '';
+let favorites = [];
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d && d.settings) settings = {...DEFAULTS, ...d.settings};
+    if (d && typeof d.draft === 'string') draft = d.draft;
+    if (d && Array.isArray(d.favorites)) favorites = d.favorites.filter(f => f && f.id && typeof f.text === 'string');
+  } catch (e) {}
+}
+let saveTimer = null;
+function saveLocal() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({settings, draft, favorites})); } catch (e) {}
+  }, 200);
+}
+
+/* ---------- 收藏雲端同步（可用時） ---------- */
+let cloud = null;
+const preCloudIds = new Set();
+const chains = {};
+const favBody = f => ({title:f.title, text:f.text, created:f.created, updated:f.updated});
+function cloudErr(e) {
+  const code = e && e.code;
+  if (code === 'quota_exceeded') { toast('收藏空間已滿，請刪除一些收藏後再試'); return; }
+  if (code === 'unavailable' || code === 'resource_exhausted') return;
+  cloud = null; // 改為只存在這個瀏覽器
+}
+function cloudWrite(id, fn) {
+  if (!cloud) return;
+  chains[id] = (chains[id] || Promise.resolve()).then(() => cloud && fn(cloud.col)).catch(cloudErr);
+}
+async function initCloud() {
+  try {
+    if (!window.claude || typeof window.claude.use !== 'function') return;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) return;
+    const uid = await user.id();
+    if (!uid) return;
+    const col = db.collection('data/users/' + uid);
+    const snap = await col.get();
+    if (!snap.empty) {
+      const remote = snap.docs.filter(d => d.exists).map(d => {
+        const x = d.data() || {};
+        const created = Number(x.created) || Date.now();
+        return {id:d.id, title:String(x.title || ''), text:String(x.text || ''), created, updated:Number(x.updated) || created};
+      }).filter(f => f.text);
+      const remoteIds = new Set(remote.map(f => f.id));
+      const localNew = favorites.filter(f => preCloudIds.has(f.id) && !remoteIds.has(f.id));
+      favorites = remote.concat(localNew);
+      cloud = {col};
+      localNew.forEach(f => cloudWrite(f.id, c => c.doc(f.id).set(favBody(f))));
+    } else {
+      cloud = {col};
+      favorites.forEach(f => cloudWrite(f.id, c => c.doc(f.id).set(favBody(f))));
+    }
+    sortFavs(); saveLocal(); renderFavorites(); syncStars();
+  } catch (e) { cloud = null; }
+}
+
+/* ---------- 收藏操作 ---------- */
+const sortFavs = () => favorites.sort((a, b) => b.created - a.created);
+const findFav = id => id ? favorites.find(f => f.id === id) : null;
+const findFavByText = t => favorites.find(f => f.text === t);
+function defaultTitle(text) {
+  const line = (text.split('\n').find(l => l.trim()) || '').trim().replace(/[，,。.!！?？、：:；;]+$/, '');
+  return line.length > 14 ? line.slice(0, 14) + '…' : (line || '未命名');
+}
+function addFavorite(title, text) {
+  const now = Date.now();
+  const f = {id:'f' + now.toString(36) + Math.random().toString(36).slice(2, 7), title, text, created:now, updated:now};
+  favorites.unshift(f);
+  if (!cloud) preCloudIds.add(f.id);
+  saveLocal();
+  cloudWrite(f.id, c => c.doc(f.id).set(favBody(f)));
+  renderFavorites(); syncStars();
+  return f;
+}
+const favTimers = {};
+function updateFavorite(id, patch) {
+  const f = findFav(id);
+  if (!f) return;
+  Object.assign(f, patch, {updated:Date.now()});
+  saveLocal();
+  clearTimeout(favTimers[id]);
+  favTimers[id] = setTimeout(() => cloudWrite(id, c => c.doc(id).set(favBody(f))), 700);
+}
+function removeFavorite(id) {
+  favorites = favorites.filter(f => f.id !== id);
+  clearTimeout(favTimers[id]);
+  saveLocal();
+  cloudWrite(id, c => c.doc(id).delete());
+  renderFavorites(); syncStars();
+}
+
+/* ---------- 語音 ---------- */
+const synth = window.speechSynthesis;
+const supported = !!(synth && window.SpeechSynthesisUtterance);
+let voices = [];
+const normLang = l => String(l || '').replace('_', '-');
+const groupOf = l => { const p = normLang(l).toLowerCase().split('-')[0]; return p === 'zh' || p === 'cmn' || p === 'yue' ? 'zh' : p === 'en' ? 'en' : 'other'; };
+let dn = null;
+try { dn = new Intl.DisplayNames(['zh-Hant'], {type:'language'}); } catch (e) {}
+function voiceLangLabel(lang) {
+  const l = normLang(lang);
+  const map = {'zh-TW':'國語（台灣）','zh-HK':'粵語（香港）','zh-CN':'普通話（中國）','en-US':'英文（美國）','en-GB':'英文（英國）','en-AU':'英文（澳洲）','en-IN':'英文（印度）','en-CA':'英文（加拿大）','ja-JP':'日文','ko-KR':'韓文'};
+  if (map[l]) return map[l];
+  try { return dn ? dn.of(l) : l; } catch (e) { return l; }
+}
+const langLabel = code => (LANGS.find(x => x.code === code) || {}).label || voiceLangLabel(code);
+function cleanName(v) {
+  let n = v.name.replace(/^(Microsoft|Google|Apple)\s+/i, '');
+  n = n.replace(/\s+Online\s*\(Natural\)/i, '').replace(/\s+-\s+[A-Za-z ()]+$/, '').trim();
+  return n || v.name;
+}
+function loadVoices() {
+  if (!supported) return;
+  voices = synth.getVoices().slice();
+  renderLabels();
+  if (current() === 'voices') renderVoices();
+  if (current() === 'language') renderLanguages();
+}
+const selectedVoice = () => settings.voiceURI ? voices.find(v => v.voiceURI === settings.voiceURI) || null : null;
+function voiceFor(lang) {
+  const sel = selectedVoice();
+  if (sel) return sel;
+  const l = normLang(lang).toLowerCase();
+  const exact = voices.filter(v => normLang(v.lang).toLowerCase() === l);
+  const pick = arr => arr.find(v => v.default) || arr.find(v => /natural|premium|enhanced/i.test(v.name)) || arr[0];
+  if (exact.length) return pick(exact);
+  const pre = voices.filter(v => normLang(v.lang).toLowerCase().split('-')[0] === l.split('-')[0]);
+  return pre.length ? pick(pre) : null;
+}
+const pitchValue = p => 1 + p * 0.25;
+function makeUtterance(text, opts = {}) {
+  const u = new SpeechSynthesisUtterance(text);
+  const v = voiceFor(settings.lang);
+  if (v) u.voice = v;
+  u.lang = v ? v.lang : settings.lang;
+  u.rate = opts.rate != null ? opts.rate : settings.rate;
+  u.pitch = pitchValue(opts.pitch != null ? opts.pitch : settings.pitch);
+  return u;
+}
+function speakNow(u) {
+  if (synth.speaking || synth.pending) {
+    synth.cancel();
+    setTimeout(() => synth.speak(u), 60);
+  } else {
+    synth.speak(u);
+  }
+}
+function sampleText() {
+  const g = settings.lang.split('-')[0];
+  return {zh:'你好，這是目前的語音、語速與音調。', en:'Hello, this is how the current voice sounds.', ja:'こんにちは。これは現在の音声です。', ko:'안녕하세요. 현재 음성입니다.'}[g] || 'Hello, this is how the current voice sounds.';
+}
+function preview(opts) {
+  if (!supported) { toast('這個瀏覽器不支援語音朗讀'); return; }
+  if (engine.playing) pause();
+  engine.token++;
+  speakNow(makeUtterance(sampleText(), opts));
+}
+
+/* ---------- 分段 ---------- */
+function splitSegments(text, auto) {
+  if (!text.trim()) return [];
+  if (!auto) return [{start:0, end:text.length, text}];
+  const re = /(?:[^\n。！？!?；;….]|\.(?=\S))+(?:[。！？!?；;…]+|\.+(?=\s|$))?[」』”"’'）)\]]*/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(text))) {
+    if (!m[0].trim()) continue;
+    const seg = {start:m.index, end:m.index + m[0].length};
+    out.push(...chunk(text, seg, 120));
+  }
+  return out.map(s => ({...s, text:text.slice(s.start, s.end)}));
+}
+function chunk(text, seg, max) {
+  if (seg.end - seg.start <= max) return [seg];
+  const sub = text.slice(seg.start, seg.end);
+  const re = /[^，,、：:]+[，,、：:]*/g;
+  const parts = [];
+  let m, cur = null;
+  while ((m = re.exec(sub))) {
+    const p = {start:seg.start + m.index, end:seg.start + m.index + m[0].length};
+    if (cur && p.end - cur.start <= max) cur.end = p.end;
+    else { if (cur) parts.push(cur); cur = p; }
+  }
+  if (cur) parts.push(cur);
+  const out = [];
+  parts.forEach(p => {
+    let s = p.start;
+    while (p.end - s > max) {
+      let cut = text.lastIndexOf(' ', s + max);
+      if (cut <= s + 20) cut = s + max;
+      out.push({start:s, end:cut});
+      s = cut;
+    }
+    out.push({start:s, end:p.end});
+  });
+  return out;
+}
+function estSec(str, rate = settings.rate) {
+  const cjk = (str.match(/[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]/g) || []).length;
+  const words = (str.match(/[A-Za-z0-9]+(?:['’][A-Za-z]+)?/g) || []).length;
+  const punc = (str.match(/[。！？!?；;，,、：:.\n]/g) || []).length;
+  return (cjk * 0.24 + words * 0.36 + punc * 0.18) / rate;
+}
+
+/* ---------- 播放引擎 ---------- */
+const engine = {
+  text:'', segs:[], cum:[], total:0, idx:0, offset:0,
+  playing:false, finished:false, started:false, token:0,
+  segStartTime:0, segStartOff:0, uttDur:1, boundaryRel:0, gotBoundary:false,
+  favId:null, title:''
+};
+function buildSegs(text) {
+  engine.segs = splitSegments(text, settings.autoSegment);
+  engine.cum = [0];
+  engine.segs.forEach((s, i) => engine.cum.push(engine.cum[i] + estSec(s.text)));
+  engine.total = engine.cum[engine.cum.length - 1] || 0;
+}
+function loadText(text, favId) {
+  stop(true);
+  engine.text = text;
+  engine.favId = favId || (findFavByText(text) || {}).id || null;
+  engine.title = favId && findFav(favId) ? findFav(favId).title : defaultTitle(text);
+  buildSegs(text);
+  engine.idx = 0; engine.offset = 0; engine.finished = false; engine.started = false;
+  renderReader(); renderProgress(); syncStars();
+}
+function relPos() {
+  const seg = engine.segs[engine.idx];
+  if (!seg) return 0;
+  if (!engine.playing) return engine.offset;
+  const len = seg.text.length - engine.segStartOff;
+  const frac = Math.min(0.98, (performance.now() - engine.segStartTime) / engine.uttDur);
+  const t = engine.segStartOff + Math.floor(Math.max(0, frac) * len);
+  return Math.max(t, engine.gotBoundary ? engine.boundaryRel : 0);
+}
+function elapsedSec() {
+  if (engine.finished) return engine.total;
+  const seg = engine.segs[engine.idx];
+  if (!seg) return 0;
+  return engine.cum[engine.idx] + estSec(seg.text.slice(0, relPos()));
+}
+function speakCurrent() {
+  const seg = engine.segs[engine.idx];
+  if (!seg) return finish();
+  const tok = ++engine.token;
+  const startOff = Math.min(engine.offset, seg.text.length);
+  const str = seg.text.slice(startOff);
+  engine.segStartOff = startOff;
+  engine.boundaryRel = startOff;
+  engine.gotBoundary = false;
+  engine.segStartTime = performance.now();
+  engine.uttDur = Math.max(300, estSec(str) * 1000);
+  renderReader(true);
+  if (!str.trim()) { setTimeout(() => { if (tok === engine.token) advance(); }, 0); return; }
+  const u = makeUtterance(str);
+  u.onstart = () => { if (tok === engine.token) engine.segStartTime = performance.now(); };
+  u.onboundary = e => {
+    if (tok !== engine.token || typeof e.charIndex !== 'number') return;
+    engine.gotBoundary = true;
+    engine.boundaryRel = startOff + e.charIndex;
+  };
+  u.onend = () => { if (tok === engine.token) advance(); };
+  u.onerror = e => {
+    if (tok !== engine.token) return;
+    if (e.error === 'interrupted' || e.error === 'canceled') return;
+    engine.playing = false;
+    renderPlayState();
+    toast(e.error === 'not-allowed' ? '請再點一次播放鍵開始朗讀' : '朗讀中斷了，請再試一次');
+  };
+  speakNow(u);
+}
+function advance() {
+  engine.offset = 0;
+  engine.idx++;
+  if (engine.idx >= engine.segs.length) {
+    if (!settings.stopAtEnd && engine.segs.length) { engine.idx = 0; speakCurrent(); return; }
+    finish();
+    return;
+  }
+  speakCurrent();
+}
+function finish() {
+  engine.token++;
+  engine.playing = false;
+  engine.finished = true;
+  engine.idx = Math.max(0, engine.segs.length - 1);
+  engine.offset = engine.segs[engine.idx] ? engine.segs[engine.idx].text.length : 0;
+  renderPlayState(); renderReader(); renderProgress();
+}
+function play() {
+  if (!supported) { toast('這個瀏覽器不支援語音朗讀'); return; }
+  if (!engine.segs.length) { toast('沒有可以朗讀的文字'); return; }
+  if (engine.finished) { engine.finished = false; engine.idx = 0; engine.offset = 0; }
+  engine.playing = true;
+  engine.started = true;
+  renderPlayState();
+  speakCurrent();
+}
+function snapBack(segText, pos, minPos) {
+  for (let i = pos; i > Math.max(minPos, pos - 14); i--) {
+    if (/[\s，,。、：:；;！？!?]/.test(segText[i - 1] || '')) return i;
+  }
+  return pos;
+}
+function pause() {
+  if (!engine.playing) return;
+  const seg = engine.segs[engine.idx];
+  let p = engine.gotBoundary ? engine.boundaryRel : Math.max(engine.segStartOff, relPos() - 1);
+  if (seg) p = snapBack(seg.text, p, engine.segStartOff);
+  engine.offset = p;
+  engine.playing = false;
+  engine.token++;
+  if (supported) synth.cancel();
+  renderPlayState(); renderProgress();
+}
+function stop(silent) {
+  engine.token++;
+  engine.playing = false;
+  if (supported && (synth.speaking || synth.pending)) synth.cancel();
+  if (!silent) { engine.idx = 0; engine.offset = 0; renderPlayState(); renderProgress(); }
+}
+function togglePlay() { engine.playing ? pause() : play(); }
+function jumpTo(idx, offset = 0) {
+  if (!engine.segs.length) return;
+  engine.finished = false;
+  engine.idx = Math.max(0, Math.min(engine.segs.length - 1, idx));
+  engine.offset = offset;
+  if (engine.playing) speakCurrent(); else { renderReader(true); renderProgress(); }
+}
+function prev() {
+  const seg = engine.segs[engine.idx];
+  const into = seg ? estSec(seg.text.slice(0, relPos())) : 0;
+  if (into > 2 && engine.segs.length > 1) jumpTo(engine.idx);
+  else jumpTo(engine.idx - 1);
+}
+function next() {
+  if (engine.idx >= engine.segs.length - 1) { if (engine.playing) { engine.token++; synth.cancel(); } finish(); return; }
+  jumpTo(engine.idx + 1);
+}
+function seekRatio(r) {
+  if (!engine.segs.length) return;
+  const t = Math.max(0, Math.min(1, r)) * engine.total;
+  let i = 0;
+  while (i < engine.segs.length - 1 && engine.cum[i + 1] <= t) i++;
+  let off = 0;
+  const seg = engine.segs[i];
+  if (engine.segs.length === 1 || seg.text.length > 60) {
+    const segDur = engine.cum[i + 1] - engine.cum[i] || 1;
+    off = Math.floor((t - engine.cum[i]) / segDur * seg.text.length);
+    off = snapBack(seg.text, off, 0);
+  }
+  jumpTo(i, off);
+}
+function resegment() {
+  if (!engine.text) return;
+  const abs = (engine.segs[engine.idx] ? engine.segs[engine.idx].start : 0) + relPos();
+  const wasPlaying = engine.playing;
+  if (wasPlaying) { engine.token++; synth.cancel(); }
+  buildSegs(engine.text);
+  let i = engine.segs.findIndex(s => abs < s.end);
+  if (i < 0) i = engine.segs.length - 1;
+  engine.idx = Math.max(0, i);
+  engine.offset = engine.segs[engine.idx] ? Math.max(0, Math.min(abs - engine.segs[engine.idx].start, engine.segs[engine.idx].text.length)) : 0;
+  if (settings.autoSegment) engine.offset = 0;
+  if (wasPlaying) speakCurrent(); else { renderReader(); renderProgress(); }
+}
+
+/* Chrome 桌機版長句會被截斷的已知問題 */
+const isChromeDesktop = /Chrome\//.test(navigator.userAgent) && !/Android|Edg\//.test(navigator.userAgent);
+setInterval(() => {
+  if (supported && isChromeDesktop && engine.playing && synth.speaking && !synth.paused) { synth.pause(); synth.resume(); }
+}, 10000);
+setInterval(() => { if (engine.playing) renderProgress(); }, 120);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && engine.playing && !settings.backgroundPlay) pause();
+});
+window.addEventListener('pagehide', () => { if (supported) synth.cancel(); });
+
+/* ---------- 導覽 ---------- */
+const SUB = new Set(['voiceSettings', 'language', 'voices', 'adjust']);
+let stack = ['home'];
+const current = () => stack[stack.length - 1];
+function show() {
+  const name = current();
+  $$('.screen').forEach(s => s.classList.toggle('active', s.dataset.screen === name));
+  $('#tabbar').hidden = SUB.has(name);
+  $$('#tabbar button').forEach(b => b.toggleAttribute('aria-current', b.dataset.tab === stack[0]));
+  $$('#tabbar button[aria-current]').forEach(b => b.setAttribute('aria-current', 'page'));
+  const sc = $(`.screen[data-screen="${name}"]`);
+  if (sc) sc.scrollTop = 0;
+  if (name === 'favorites') renderFavorites();
+  if (name === 'language') renderLanguages();
+  if (name === 'voices') { voiceTab = groupOf(settings.lang); renderVoices(); }
+  if (name === 'adjust') initAdjust();
+  if (name === 'player') { renderReader(true); renderProgress(); }
+  if (name === 'voiceSettings') renderVoiceSettings();
+  if (name === 'settings') renderSettings();
+  renderMini();
+}
+function go(name) { if (current() !== name) { stack.push(name); show(); } }
+function back() { if (stack.length > 1) stack.pop(); show(); }
+function closeSub() { while (stack.length > 1 && SUB.has(current())) stack.pop(); show(); }
+function tab(name) { stack = [name]; show(); }
+
+/* ---------- 畫面渲染 ---------- */
+const fmtRate = r => { const v = Math.round(r * 100) / 100; return (Number.isInteger(v) ? v.toFixed(1) : String(v)) + 'x'; };
+const fmtPitch = p => p === 0 ? '0（預設）' : (p > 0 ? '+' + p : String(p));
+const fmtPitchShort = p => p === 0 ? '預設' : (p > 0 ? '+' + p : String(p));
+const fmtTime = s => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60); return String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+function renderLabels() {
+  const v = selectedVoice();
+  const map = {
+    lang: langLabel(settings.lang),
+    voice: v ? cleanName(v) : '自動選擇',
+    rate: fmtRate(settings.rate),
+    pitch: fmtPitch(settings.pitch),
+    pitchShort: fmtPitchShort(settings.pitch)
+  };
+  $$('[data-bind]').forEach(el => { el.textContent = map[el.dataset.bind]; });
+  setRange($('#vsRate'), settings.rate);
+  setRange($('#vsPitch'), settings.pitch);
+}
+function setRange(el, val) {
+  if (!el) return;
+  el.value = val;
+  const min = +el.min, max = +el.max;
+  el.style.setProperty('--p', ((val - min) / (max - min) * 100) + '%');
+}
+function renderCount(el, len) {
+  el.textContent = `${len} / ${MAX_LEN}`;
+  el.classList.toggle('full', len >= MAX_LEN);
+}
+function renderReader(scroll) {
+  const box = $('#readerText');
+  if (!box) return;
+  const t = engine.text;
+  if (!engine.segs.length) { box.textContent = t || ''; $('#segCount').textContent = '0 / 0'; return; }
+  let html = '', last = 0;
+  const multi = engine.segs.length > 1;
+  engine.segs.forEach((s, i) => {
+    html += esc(t.slice(last, s.start));
+    let cls = 'seg';
+    if (multi && engine.started) {
+      if (i < engine.idx || (engine.finished && i === engine.idx)) cls += ' done';
+      else if (i === engine.idx) cls += ' cur';
+    }
+    html += `<span class="${cls}" data-i="${i}">${esc(s.text)}</span>`;
+    last = s.end;
+  });
+  html += esc(t.slice(last));
+  box.innerHTML = html;
+  $('#segCount').textContent = `${Math.min(engine.idx + 1, engine.segs.length)} / ${engine.segs.length}`;
+  if (scroll) {
+    const cur = box.querySelector('.seg.cur');
+    if (cur) {
+      const top = cur.offsetTop - box.offsetTop;
+      if (top < box.scrollTop || top > box.scrollTop + box.clientHeight - 40) box.scrollTo({top: Math.max(0, top - 30), behavior:'smooth'});
+    } else if (engine.idx === 0) box.scrollTop = 0;
+  }
+}
+let dragging = false;
+function renderProgress(ratioOverride) {
+  const total = engine.total;
+  const now = elapsedSec();
+  const r = ratioOverride != null ? ratioOverride : (total ? Math.min(1, now / total) : 0);
+  const tr = $('#track');
+  tr.querySelector('.fill').style.width = (r * 100) + '%';
+  tr.querySelector('.thumb').style.left = (r * 100) + '%';
+  tr.setAttribute('aria-valuenow', Math.round(r * 100));
+  $('#tNow').textContent = fmtTime(ratioOverride != null ? r * total : now);
+  $('#tTotal').textContent = fmtTime(total);
+}
+function renderPlayState() {
+  $('#app').classList.toggle('is-playing', engine.playing);
+  renderMini();
+}
+function renderMini() {
+  const show = engine.text && engine.started && !engine.finished && current() !== 'player' && !SUB.has(current());
+  $('#mini').hidden = !show;
+  if (show) {
+    $('#miniTitle').textContent = engine.title;
+    $('#miniState').textContent = engine.playing ? '正在朗讀' : '已暫停';
+  }
+}
+function syncStars() {
+  const pOn = !!findFav(engine.favId);
+  $('#playerStar').classList.toggle('on', pOn);
+  $('#playerStar').setAttribute('aria-label', pOn ? '從收藏移除' : '加入收藏');
+  const eOn = !!findFav(editing.id);
+  $('#editStar').classList.toggle('on', eOn);
+  $('#editStar').setAttribute('aria-label', eOn ? '從收藏移除' : '加入收藏');
+  $('#editTitle').hidden = !eOn;
+}
+function timeLabel(ts) {
+  const d = new Date(ts), n = new Date();
+  const day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(n) - day(d)) / 86400000);
+  const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  if (diff === 0) return '今天 ' + hm;
+  if (diff === 1) return '昨天 ' + hm;
+  if (diff === 2) return '前天 ' + hm;
+  const md = `${d.getMonth() + 1}/${d.getDate()}`;
+  return (d.getFullYear() === n.getFullYear() ? md : d.getFullYear() + '/' + md) + ' ' + hm;
+}
+function renderFavorites() {
+  const list = $('#favList');
+  const lbl = $('#favCountLabel');
+  if (lbl) lbl.textContent = favorites.length ? favorites.length + ' 筆' : '';
+  if (!list) return;
+  if (!favorites.length) {
+    list.innerHTML = `<div class="empty"><div class="big">${svg('star')}</div><h3>還沒有收藏</h3><p>在首頁或朗讀畫面點星號，常用的文字就會存在這裡。</p><button class="primary" data-tab-go="home">去輸入文字</button></div>`;
+    return;
+  }
+  list.innerHTML = favorites.map(f => `
+    <div class="fav card" data-id="${esc(f.id)}">
+      <button class="fav-main" data-fav="open">
+        <span class="i fav-star">${svg('star')}</span>
+        <span class="fav-body">
+          <span class="fav-title">${esc(f.title || defaultTitle(f.text))}</span>
+          <span class="fav-preview">${esc(f.text.replace(/\s+/g, ' ').slice(0, 40))}</span>
+          <span class="fav-time">${timeLabel(f.updated || f.created)}</span>
+        </span>
+      </button>
+      <button class="fav-play" data-fav="play" aria-label="朗讀「${esc(f.title)}」"><span class="i">${svg('play')}</span></button>
+      <button class="fav-more" data-fav="more" aria-label="更多動作"><span class="i">${svg('more')}</span></button>
+    </div>`).join('');
+}
+function renderSettings() {
+  const sw = $('#darkSwitch');
+  sw.setAttribute('aria-checked', String(settings.theme === 'dark'));
+  renderFavorites();
+}
+function renderVoiceSettings() {
+  renderLabels();
+  $$('[data-toggle]').forEach(el => el.setAttribute('aria-checked', String(!!settings[el.dataset.toggle])));
+}
+function renderLanguages() {
+  const counts = {};
+  voices.forEach(v => { const l = normLang(v.lang); counts[l] = (counts[l] || 0) + 1; });
+  const extra = settings.lang && !LANGS.some(l => l.code === settings.lang) ? [{code:settings.lang, label:langLabel(settings.lang)}] : [];
+  $('#langList').innerHTML = LANGS.concat(extra).map(l => {
+    const c = counts[l.code] || 0;
+    const sub = voices.length ? (c ? `${c} 個語音` : '沒有對應語音') : '';
+    return `<button class="pick" role="radio" aria-checked="${l.code === settings.lang}" data-lang="${esc(l.code)}">
+      <span class="lbl"><span class="main">${esc(l.label)}</span>${sub ? `<span class="sub">${sub}</span>` : ''}</span><span class="radio"></span></button>`;
+  }).join('');
+}
+let voiceTab = 'zh';
+function renderVoices() {
+  const groups = [['zh', '中文'], ['en', '英文'], ['other', '其他']].filter(([g]) => g === 'zh' || g === 'en' || voices.some(v => groupOf(v.lang) === g));
+  if (!groups.some(([g]) => g === voiceTab)) voiceTab = 'zh';
+  $('#voiceTabs').innerHTML = groups.map(([g, n]) => `<button role="tab" aria-selected="${g === voiceTab}" data-vtab="${g}">${n}</button>`).join('');
+  const list = voices.filter(v => groupOf(v.lang) === voiceTab).sort((a, b) => {
+    const am = normLang(a.lang) === settings.lang ? 0 : 1, bm = normLang(b.lang) === settings.lang ? 0 : 1;
+    return am - bm || normLang(a.lang).localeCompare(normLang(b.lang)) || a.name.localeCompare(b.name);
+  });
+  let html = `<button class="pick" role="radio" aria-checked="${!settings.voiceURI}" data-voice="">
+    <span class="lbl"><span class="main">自動選擇</span><span class="sub">依「${esc(langLabel(settings.lang))}」挑選合適的語音</span></span><span class="radio"></span></button>`;
+  if (!supported) html += `<div class="pick"><span class="lbl"><span class="sub">這個瀏覽器不支援語音朗讀</span></span></div>`;
+  else if (!list.length) html += `<div class="pick"><span class="lbl"><span class="sub">${voices.length ? '這個分類沒有可用的語音' : '正在載入語音…若一直沒有出現，代表瀏覽器沒有提供語音'}</span></span></div>`;
+  html += list.map(v => `<button class="pick" role="radio" aria-checked="${v.voiceURI === settings.voiceURI}" data-voice="${esc(v.voiceURI)}">
+    <span class="lbl"><span class="main">${esc(voiceLangLabel(v.lang))} - ${esc(cleanName(v))}${v.localService ? '' : '<span class="tag">線上</span>'}</span></span><span class="radio"></span></button>`).join('');
+  $('#voiceList').innerHTML = html;
+}
+const RATE_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const PITCH_PRESETS = [-2, -1, 0, 1, 2];
+let adj = {rate:1, pitch:0};
+function initAdjust() { adj = {rate:settings.rate, pitch:settings.pitch}; renderAdjust(); }
+function renderAdjust() {
+  setRange($('#adjRate'), adj.rate);
+  setRange($('#adjPitch'), adj.pitch);
+  $('#adjRateVal').textContent = fmtRate(adj.rate);
+  $('#adjPitchVal').textContent = fmtPitch(adj.pitch);
+  $('#ratePresets').innerHTML = RATE_PRESETS.map(r => `<button class="preset" data-rate="${r}" aria-pressed="${Math.abs(adj.rate - r) < 0.001}">${fmtRate(r)}</button>`).join('');
+  $('#pitchPresets').innerHTML = PITCH_PRESETS.map(p => `<button class="preset" data-pitch="${p}" aria-pressed="${adj.pitch === p}">${p > 0 ? '+' + p : p}</button>`).join('');
+}
+function buildWave() {
+  const hs = [14, 26, 18, 38, 24, 46, 30, 46, 24, 38, 18, 26, 14];
+  $('#wave').innerHTML = hs.map((h, i) => `<span style="--h:${h}px;--d:${(i % 5) * -0.18}s"></span>`).join('');
+}
+
+/* ---------- 設定變更 ---------- */
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', settings.theme === 'light' ? 'light' : 'dark');
+  const sw = $('#darkSwitch');
+  if (sw) sw.setAttribute('aria-checked', String(settings.theme === 'dark'));
+}
+function setRate(r, live = true) {
+  settings.rate = Math.round(Math.max(0.5, Math.min(2, r)) * 100) / 100;
+  saveLocal(); renderLabels();
+  if (engine.text) { buildCumOnly(); renderProgress(); }
+}
+function buildCumOnly() {
+  engine.cum = [0];
+  engine.segs.forEach((s, i) => engine.cum.push(engine.cum[i] + estSec(s.text)));
+  engine.total = engine.cum[engine.cum.length - 1] || 0;
+}
+function setPitch(p) { settings.pitch = Math.max(-2, Math.min(2, Math.round(p))); saveLocal(); renderLabels(); }
+
+/* ---------- 對話框與提示 ---------- */
+let toastTimer = null;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+let lastFocus = null;
+function openSheet({title, body, actions}) {
+  lastFocus = document.activeElement;
+  $('#sheetTitle').textContent = title;
+  const b = $('#sheetBody');
+  b.innerHTML = '';
+  if (typeof body === 'string') b.textContent = body; else if (body) b.appendChild(body);
+  b.hidden = !body;
+  const a = $('#sheetActions');
+  a.innerHTML = '';
+  actions.forEach(act => {
+    const btn = document.createElement('button');
+    btn.className = act.style === 'primary' ? 'primary' : act.style === 'danger' ? 'primary danger' : 'secondary';
+    btn.textContent = act.label;
+    btn.addEventListener('click', () => { closeSheet(); if (act.onClick) act.onClick(); });
+    a.appendChild(btn);
+  });
+  $('#overlay').hidden = false;
+  const first = $('#sheetBody input') || a.querySelector('button');
+  setTimeout(() => first && first.focus(), 30);
+}
+function closeSheet() {
+  $('#overlay').hidden = true;
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+function askTitle(text, onSave) {
+  const wrap = document.createElement('div');
+  const label = document.createElement('label');
+  label.textContent = '名稱';
+  label.htmlFor = 'sheetInput';
+  const input = document.createElement('input');
+  input.className = 'field'; input.id = 'sheetInput'; input.maxLength = 30;
+  input.value = defaultTitle(text);
+  wrap.append(label, input);
+  const save = () => onSave(input.value.trim() || defaultTitle(text));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); closeSheet(); save(); } });
+  openSheet({title:'加入收藏', body:wrap, actions:[{label:'儲存', style:'primary', onClick:save}, {label:'取消'}]});
+  setTimeout(() => input.select(), 40);
+}
+
+/* ---------- 編輯狀態 ---------- */
+let editing = {id:null, text:''};
+function openEdit(fav) {
+  editing = {id:fav.id, text:fav.text};
+  $('#editText').value = fav.text;
+  $('#editTitle').value = fav.title;
+  renderCount($('#editCount'), fav.text.length);
+  syncStars();
+  go('edit');
+}
+function startReading(text, favId) {
+  if (!text.trim()) { toast('請先輸入要朗讀的文字'); return false; }
+  if (!supported) { toast('這個瀏覽器不支援語音朗讀'); return false; }
+  loadText(text, favId);
+  go('player');
+  play();
+  return true;
+}
+
+/* ---------- 事件 ---------- */
+function onAction(act, el) {
+  switch (act) {
+    case 'back': back(); break;
+    case 'close-sub': closeSub(); break;
+    case 'toggle-theme':
+      settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
+      applyTheme(); saveLocal(); break;
+    case 'clear-home':
+      draft = ''; $('#homeText').value = ''; renderCount($('#homeCount'), 0); saveLocal(); $('#homeText').focus(); break;
+    case 'save-home': {
+      const t = $('#homeText').value;
+      if (!t.trim()) { toast('請先輸入要收藏的文字'); $('#homeText').focus(); return; }
+      if (findFavByText(t)) { toast('這段文字已在收藏中'); return; }
+      askTitle(t, title => { addFavorite(title, t); toast('已加入收藏'); });
+      break;
+    }
+    case 'start-home': if (!startReading($('#homeText').value, null)) $('#homeText').focus(); break;
+    case 'start-edit': startReading($('#editText').value, editing.id); break;
+    case 'toggle-play': togglePlay(); break;
+    case 'prev': prev(); break;
+    case 'next': next(); break;
+    case 'open-player': go('player'); break;
+    case 'star-player': {
+      const f = findFav(engine.favId);
+      if (f) { removeFavorite(f.id); toast('已從收藏移除'); }
+      else askTitle(engine.text, title => { const nf = addFavorite(title, engine.text); engine.favId = nf.id; engine.title = title; syncStars(); toast('已加入收藏'); });
+      break;
+    }
+    case 'star-edit': {
+      const f = findFav(editing.id);
+      if (f) { removeFavorite(f.id); editing.id = null; syncStars(); toast('已從收藏移除'); }
+      else {
+        const t = $('#editText').value;
+        if (!t.trim()) { toast('請先輸入要收藏的文字'); return; }
+        askTitle(t, title => { const nf = addFavorite(title, t); editing.id = nf.id; $('#editTitle').value = title; syncStars(); toast('已加入收藏'); });
+      }
+      break;
+    }
+    case 'clear-favs':
+      if (!favorites.length) { toast('目前沒有收藏'); return; }
+      openSheet({title:'清除所有收藏？', body:`這會刪除 ${favorites.length} 筆收藏，刪除後無法復原。`, actions:[
+        {label:'清除收藏', style:'danger', onClick:() => { favorites.slice().forEach(f => removeFavorite(f.id)); toast('已清除收藏'); }},
+        {label:'取消'}]});
+      break;
+    case 'about':
+      openSheet({title:'關於本 App', body:'文字轉語音使用瀏覽器內建的語音合成朗讀你輸入的文字。可用的語音取決於你的裝置與瀏覽器；標示「線上」的語音會由瀏覽器連線產生聲音。收藏與設定會保存在這個瀏覽器中。', actions:[{label:'知道了', style:'primary'}]});
+      break;
+    case 'adj-preview': preview({rate:adj.rate, pitch:adj.pitch}); break;
+    case 'adj-confirm':
+      setRate(adj.rate); setPitch(adj.pitch); back(); toast('已套用語速與音調'); break;
+  }
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-action],[data-go],[data-tab],[data-tab-go],[data-lang],[data-voice],[data-vtab],[data-rate],[data-pitch],[data-step],[data-adj-step],[data-toggle],[data-fav]');
+  if (!t) return;
+  if (t.dataset.action) return onAction(t.dataset.action, t);
+  if (t.dataset.go) return go(t.dataset.go);
+  if (t.dataset.tab) return tab(t.dataset.tab);
+  if (t.dataset.tabGo) return tab(t.dataset.tabGo);
+  if (t.dataset.lang) {
+    settings.lang = t.dataset.lang;
+    const v = selectedVoice();
+    if (v && normLang(v.lang) !== settings.lang) settings.voiceURI = null;
+    saveLocal(); renderLabels(); renderLanguages();
+    setTimeout(back, 160);
+    return;
+  }
+  if (t.dataset.voice !== undefined) {
+    const uri = t.dataset.voice;
+    if (!uri) settings.voiceURI = null;
+    else {
+      const v = voices.find(x => x.voiceURI === uri);
+      if (!v) return;
+      settings.voiceURI = uri;
+      const l = normLang(v.lang);
+      settings.lang = LANGS.find(x => x.code.toLowerCase() === l.toLowerCase()) ? LANGS.find(x => x.code.toLowerCase() === l.toLowerCase()).code : l;
+    }
+    saveLocal(); renderLabels(); renderVoices(); preview();
+    return;
+  }
+  if (t.dataset.vtab) { voiceTab = t.dataset.vtab; renderVoices(); return; }
+  if (t.dataset.rate) { adj.rate = +t.dataset.rate; renderAdjust(); return; }
+  if (t.dataset.pitch) { adj.pitch = +t.dataset.pitch; renderAdjust(); return; }
+  if (t.dataset.step) {
+    const d = +t.dataset.dir;
+    if (t.dataset.step === 'rate') setRate(Math.round((settings.rate + d * 0.25) * 4) / 4);
+    else setPitch(settings.pitch + d);
+    return;
+  }
+  if (t.dataset.adjStep) {
+    const d = +t.dataset.dir;
+    if (t.dataset.adjStep === 'rate') adj.rate = Math.max(0.5, Math.min(2, Math.round((adj.rate + d * 0.25) * 4) / 4));
+    else adj.pitch = Math.max(-2, Math.min(2, adj.pitch + d));
+    renderAdjust();
+    return;
+  }
+  if (t.dataset.toggle) {
+    const k = t.dataset.toggle;
+    settings[k] = !settings[k];
+    t.setAttribute('aria-checked', String(settings[k]));
+    saveLocal();
+    if (k === 'autoSegment') resegment();
+    return;
+  }
+  if (t.dataset.fav) {
+    const card = t.closest('.fav');
+    const f = findFav(card && card.dataset.id);
+    if (!f) return;
+    if (t.dataset.fav === 'open') openEdit(f);
+    else if (t.dataset.fav === 'play') startReading(f.text, f.id);
+    else openSheet({title:f.title || defaultTitle(f.text), body:null, actions:[
+      {label:'編輯', style:'primary', onClick:() => openEdit(f)},
+      {label:'刪除', style:'danger', onClick:() => { removeFavorite(f.id); toast('已刪除收藏'); }},
+      {label:'取消'}]});
+  }
+});
+
+$('#darkSwitch').addEventListener('click', () => onAction('toggle-theme'));
+$('#overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeSheet(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#overlay').hidden) { closeSheet(); return; }
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (e.code === 'Space' && current() === 'player' && tag !== 'textarea' && tag !== 'input' && tag !== 'button' && $('#overlay').hidden) {
+    e.preventDefault(); togglePlay();
+  }
+});
+
+$('#homeText').addEventListener('input', e => {
+  draft = e.target.value; renderCount($('#homeCount'), draft.length); saveLocal();
+});
+$('#editText').addEventListener('input', e => {
+  editing.text = e.target.value;
+  renderCount($('#editCount'), editing.text.length);
+  if (findFav(editing.id)) updateFavorite(editing.id, {text:editing.text});
+});
+$('#editTitle').addEventListener('input', e => {
+  if (findFav(editing.id)) { updateFavorite(editing.id, {title:e.target.value.trim() || defaultTitle(editing.text)}); renderFavorites(); }
+});
+$('#vsRate').addEventListener('input', e => setRate(+e.target.value));
+$('#vsPitch').addEventListener('input', e => setPitch(+e.target.value));
+$('#adjRate').addEventListener('input', e => { adj.rate = Math.round(+e.target.value * 100) / 100; renderAdjust(); });
+$('#adjPitch').addEventListener('input', e => { adj.pitch = Math.round(+e.target.value); renderAdjust(); });
+
+/* 進度列拖曳 */
+const track = $('#track');
+const ratioAt = x => { const r = track.getBoundingClientRect(); return Math.max(0, Math.min(1, (x - r.left) / r.width)); };
+track.addEventListener('pointerdown', e => { if (!engine.segs.length) return; dragging = true; track.setPointerCapture(e.pointerId); renderProgress(ratioAt(e.clientX)); });
+track.addEventListener('pointermove', e => { if (dragging) renderProgress(ratioAt(e.clientX)); });
+const endDrag = e => { if (!dragging) return; dragging = false; seekRatio(ratioAt(e.clientX)); renderProgress(); };
+track.addEventListener('pointerup', endDrag);
+track.addEventListener('pointercancel', () => { dragging = false; renderProgress(); });
+track.addEventListener('keydown', e => {
+  if (!engine.total) return;
+  const cur = elapsedSec() / engine.total;
+  if (e.key === 'ArrowRight') { e.preventDefault(); seekRatio(cur + 0.05); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); seekRatio(cur - 0.05); }
+});
+$('#readerText').addEventListener('click', e => {
+  const s = e.target.closest('.seg');
+  if (s && engine.segs.length > 1) { engine.started = true; jumpTo(+s.dataset.i); }
+});
+
+/* ---------- 啟動 ---------- */
+loadLocal();
+sortFavs();
+applyTheme();
+hydrateIcons();
+buildWave();
+$('#homeText').value = draft;
+renderCount($('#homeCount'), draft.length);
+if (!supported) $$('[data-unsupported]').forEach(el => el.hidden = false);
+if (supported) {
+  loadVoices();
+  if ('onvoiceschanged' in synth) synth.addEventListener('voiceschanged', loadVoices);
+  let tries = 0;
+  const poll = setInterval(() => { if (voices.length || ++tries > 20) clearInterval(poll); else loadVoices(); }, 250);
+}
+renderLabels();
+renderFavorites();
+syncStars();
+show();
+initCloud();
+})();
+</script>
+</body>
+</html>
