@@ -123,7 +123,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible,[tabindex]:focus
 .text-card{padding:14px 16px 10px;margin-bottom:12px}
 .text-card textarea{
   display:block;width:100%;min-height:150px;resize:vertical;border:0;background:transparent;color:var(--text);
-  font:inherit;font-size:17px;line-height:1.8;outline:none;padding:0
+  font:inherit;font-size:var(--text-size,18px);line-height:1.8;outline:none;padding:0
 }
 .text-card textarea::placeholder{color:var(--faint)}
 .text-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
@@ -144,7 +144,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible,[tabindex]:focus
 .row .chev{color:var(--faint);width:18px;height:18px}
 
 .group{background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:22px}
-.group > .row + .row,.group > .row + .slider-block,.group > .slider-block + .slider-block,.group > .toggle-row + .toggle-row{border-top:1px solid var(--line)}
+.group > .row + .row,.group > .row + .slider-block,.group > .slider-block + .slider-block,.group > .toggle-row + .slider-block,.group > .toggle-row + .toggle-row{border-top:1px solid var(--line)}
 .group-title{margin:0 4px 10px;font-size:15px;font-weight:500;color:var(--muted)}
 
 .primary{
@@ -196,7 +196,7 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 
 /* player */
 .reader{padding:18px 18px 10px;margin-bottom:22px}
-.reader-text{max-height:min(38vh,320px);overflow-y:auto;font-size:18px;line-height:1.95;white-space:pre-wrap;word-break:break-word;padding-right:4px}
+.reader-text{max-height:min(38vh,320px);overflow-y:auto;font-size:var(--text-size,18px);line-height:1.95;white-space:pre-wrap;word-break:break-word;padding-right:4px}
 .seg{border-radius:6px;transition:background .2s,color .2s;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .seg.done{color:var(--muted)}
 .seg.cur{background:var(--accent-soft);box-shadow:0 0 0 3px var(--accent-soft);color:var(--text)}
@@ -245,6 +245,7 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 .empty .primary{max-width:220px;margin:0 auto;height:48px;font-size:16px}
 
 /* settings */
+.font-preview{margin-top:12px;padding:10px 14px;border-radius:12px;background:var(--surface-2);font-size:var(--text-size,18px);line-height:1.8;overflow-wrap:anywhere}
 .heart-card{display:flex;gap:14px;align-items:center;padding:18px;border-radius:18px;background:var(--surface);box-shadow:var(--shadow)}
 .heart-card .i{width:34px;height:34px;color:var(--heart)}
 .heart-card .ico{fill:currentColor}
@@ -408,6 +409,15 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
           <div class="txt"><div class="ttl"><span class="row-ico"><i data-icon="moon"></i></span>深色模式</div></div>
           <button class="switch" role="switch" id="darkSwitch" aria-label="深色模式"></button>
         </div>
+        <div class="slider-block">
+          <div class="slider-head"><span class="row-ico"><i data-icon="type"></i></span><span class="row-label">文字大小</span><span class="val" id="fontSizeVal"></span></div>
+          <div class="slider-line">
+            <button class="step" data-font-step="-1" aria-label="縮小文字"><i data-icon="minus"></i></button>
+            <input type="range" id="fontSize" min="14" max="32" step="1" aria-label="文字大小">
+            <button class="step" data-font-step="1" aria-label="放大文字"><i data-icon="plus"></i></button>
+          </div>
+          <div class="font-preview" aria-hidden="true">輸入文字，讓瀏覽器為你朗讀</div>
+        </div>
       </div>
       <h3 class="group-title">朗讀</h3>
       <div class="group">
@@ -567,6 +577,7 @@ const ICONS = {
   minus:'<path d="M5 12h14"/>',
   plus:'<path d="M5 12h14M12 5v14"/>',
   sliders:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+  type:'<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>'
 };
 const svg = n => `<svg viewBox="0 0 24 24" class="ico" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -595,7 +606,8 @@ const LANGS = [
   {code:'ja-JP', label:'日文（日本）'},
   {code:'ko-KR', label:'韓文（韓國）'}
 ];
-const DEFAULTS = {lang:'zh-TW', voiceURI:null, rate:1, pitch:0, autoSegment:true, stopAtEnd:true, backgroundPlay:false, theme:'dark'};
+const DEFAULTS = {lang:'zh-TW', voiceURI:null, rate:1, pitch:0, autoSegment:true, stopAtEnd:true, backgroundPlay:false, theme:'dark', fontSize:18};
+const FONT_MIN = 14, FONT_MAX = 32;
 let settings = {...DEFAULTS};
 let draft = '';
 let favorites = [];
@@ -1192,6 +1204,14 @@ function applyTheme() {
   const sw = $('#darkSwitch');
   if (sw) sw.setAttribute('aria-checked', String(settings.theme === 'dark'));
 }
+function applyFontSize() {
+  const px = Math.round(+settings.fontSize);
+  settings.fontSize = Number.isFinite(px) ? Math.max(FONT_MIN, Math.min(FONT_MAX, px)) : DEFAULTS.fontSize;
+  document.documentElement.style.setProperty('--text-size', settings.fontSize + 'px');
+  $('#fontSizeVal').textContent = settings.fontSize + 'px';
+  setRange($('#fontSize'), settings.fontSize);
+}
+function setFontSize(px) { settings.fontSize = px; applyFontSize(); saveLocal(); }
 function setRate(r, live = true) {
   settings.rate = Math.round(Math.max(0.5, Math.min(2, r)) * 100) / 100;
   saveLocal(); renderLabels();
@@ -1327,7 +1347,7 @@ function onAction(act, el) {
 }
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-action],[data-go],[data-tab],[data-tab-go],[data-lang],[data-voice],[data-vtab],[data-rate],[data-pitch],[data-step],[data-adj-step],[data-toggle],[data-fav]');
+  const t = e.target.closest('[data-action],[data-go],[data-tab],[data-tab-go],[data-lang],[data-voice],[data-vtab],[data-rate],[data-pitch],[data-step],[data-adj-step],[data-toggle],[data-font-step],[data-fav]');
   if (!t) return;
   if (t.dataset.action) return onAction(t.dataset.action, t);
   if (t.dataset.go) return go(t.dataset.go);
@@ -1378,6 +1398,7 @@ document.addEventListener('click', e => {
     if (k === 'autoSegment') resegment();
     return;
   }
+  if (t.dataset.fontStep) { setFontSize(settings.fontSize + +t.dataset.fontStep); return; }
   if (t.dataset.fav) {
     const card = t.closest('.fav');
     const f = findFav(card && card.dataset.id);
@@ -1414,6 +1435,7 @@ $('#editTitle').addEventListener('input', e => {
 });
 $('#vsRate').addEventListener('input', e => setRate(+e.target.value));
 $('#vsPitch').addEventListener('input', e => setPitch(+e.target.value));
+$('#fontSize').addEventListener('input', e => setFontSize(+e.target.value));
 $('#adjRate').addEventListener('input', e => { adj.rate = Math.round(+e.target.value * 100) / 100; renderAdjust(); });
 $('#adjPitch').addEventListener('input', e => { adj.pitch = Math.round(+e.target.value); renderAdjust(); });
 
@@ -1440,6 +1462,7 @@ $('#readerText').addEventListener('click', e => {
 loadLocal();
 sortFavs();
 applyTheme();
+applyFontSize();
 hydrateIcons();
 buildWave();
 $('#homeText').value = draft;
